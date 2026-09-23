@@ -9,7 +9,8 @@ echo checked the venv folder. now installing requirements..
 call "%~dp0\venv\scripts\activate"
 
 python -m pip install -U pip
-pip install -r requirements.txt
+python -m pip install "setuptools<82" wheel
+pip install --no-build-isolation -r requirements.txt
 
 if errorlevel 1 (
     echo.

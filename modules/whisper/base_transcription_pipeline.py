@@ -25,8 +25,14 @@ from modules.whisper.data_classes import *
 from modules.diarize.diarizer import Diarizer
 from modules.vad.silero_vad import SileroVAD
 
+import torch
 
 logger = get_logger()
+
+if hasattr(torch.serialization, "add_safe_globals"):
+    torch.serialization.add_safe_globals([
+        torch.torch_version.TorchVersion
+    ])
 
 
 class BaseTranscriptionPipeline(ABC):
@@ -52,7 +58,8 @@ class BaseTranscriptionPipeline(ABC):
         self.model = None
         self.current_model_size = None
         self.available_models = whisper.available_models()
-        self.available_langs = sorted(list(whisper.tokenizer.LANGUAGES.values()))
+        self.available_langs = sorted(
+            list(whisper.tokenizer.LANGUAGES.values()))
         self.device = self.get_device()
         self.available_compute_types = self.get_available_compute_type()
         self.current_compute_type = self.get_compute_type()
@@ -140,7 +147,8 @@ class BaseTranscriptionPipeline(ABC):
                     origin_sample_rate = 16000
                 else:
                     origin_sample_rate = self.music_separator.audio_info.sample_rate
-                audio = self.resample_audio(audio=audio, original_sample_rate=origin_sample_rate)
+                audio = self.resample_audio(
+                    audio=audio, original_sample_rate=origin_sample_rate)
 
             if bgm_params.enable_offload:
                 self.music_separator.offload()
@@ -192,7 +200,8 @@ class BaseTranscriptionPipeline(ABC):
             progress(0.99, desc="Diarizing speakers..")
             result, elapsed_time_diarization = self.diarizer.run(
                 audio=origin_audio,
-                use_auth_token=diarization_params.hf_token if diarization_params.hf_token else os.environ.get("HF_TOKEN"),
+                use_auth_token=diarization_params.hf_token if diarization_params.hf_token else os.environ.get(
+                    "HF_TOKEN"),
                 transcribed_result=result,
                 device=diarization_params.diarization_device
             )
@@ -206,7 +215,8 @@ class BaseTranscriptionPipeline(ABC):
         )
 
         if not result:
-            logger.info(f"Whisper did not detected any speech segments in the audio.")
+            logger.info(
+                f"Whisper did not detected any speech segments in the audio.")
             result = [Segment()]
 
         progress(1.0, desc="Finished.")
@@ -256,13 +266,15 @@ class BaseTranscriptionPipeline(ABC):
             Output file path to return to gr.Files()
         """
         try:
-            params = TranscriptionPipelineParams.from_list(list(pipeline_params))
+            params = TranscriptionPipelineParams.from_list(
+                list(pipeline_params))
             writer_options = {
                 "highlight_words": True if params.whisper.word_timestamps else False
             }
 
             if input_folder_path:
-                files = get_media_files(input_folder_path, include_sub_directory=include_subdirectory)
+                files = get_media_files(
+                    input_folder_path, include_sub_directory=include_subdirectory)
             if isinstance(files, str):
                 files = [files]
             if files and isinstance(files[0], gr.utils.NamedString):
@@ -299,7 +311,8 @@ class BaseTranscriptionPipeline(ABC):
                     add_timestamp=add_timestamp,
                     **writer_options
                 )
-                files_info[file_name] = {"subtitle": read_file(file_path), "time_for_task": time_for_task, "path": file_path}
+                files_info[file_name] = {"subtitle": read_file(
+                    file_path), "time_for_task": time_for_task, "path": file_path}
 
             total_result = ''
             total_time = 0
@@ -348,7 +361,8 @@ class BaseTranscriptionPipeline(ABC):
             Output file path to return to gr.Files()
         """
         try:
-            params = TranscriptionPipelineParams.from_list(list(pipeline_params))
+            params = TranscriptionPipelineParams.from_list(
+                list(pipeline_params))
             writer_options = {
                 "highlight_words": True if params.whisper.word_timestamps else False
             }
@@ -410,7 +424,8 @@ class BaseTranscriptionPipeline(ABC):
             Output file path to return to gr.Files()
         """
         try:
-            params = TranscriptionPipelineParams.from_list(list(pipeline_params))
+            params = TranscriptionPipelineParams.from_list(
+                list(pipeline_params))
             writer_options = {
                 "highlight_words": True if params.whisper.word_timestamps else False
             }
@@ -557,7 +572,8 @@ class BaseTranscriptionPipeline(ABC):
         elif params.whisper.lang == AUTOMATIC_DETECTION:
             params.whisper.lang = None
         else:
-            language_code_dict = {value: key for key, value in whisper.tokenizer.LANGUAGES.items()}
+            language_code_dict = {value: key for key,
+                                  value in whisper.tokenizer.LANGUAGES.items()}
             params.whisper.lang = language_code_dict[params.whisper.lang]
 
         if params.whisper.initial_prompt == GRADIO_NONE_STR:
@@ -615,8 +631,10 @@ class BaseTranscriptionPipeline(ABC):
             audio, original_sample_rate = torchaudio.load(audio)
         else:
             if original_sample_rate is None:
-                raise ValueError("original_sample_rate must be provided when audio is numpy array.")
+                raise ValueError(
+                    "original_sample_rate must be provided when audio is numpy array.")
             audio = torch.from_numpy(audio)
-        resampler = torchaudio.transforms.Resample(orig_freq=original_sample_rate, new_freq=new_sample_rate)
+        resampler = torchaudio.transforms.Resample(
+            orig_freq=original_sample_rate, new_freq=new_sample_rate)
         resampled_audio = resampler(audio).numpy()
         return resampled_audio
